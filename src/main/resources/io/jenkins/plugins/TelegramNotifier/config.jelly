@@ -2,12 +2,43 @@
 <j:jelly xmlns:j="jelly:core"
          xmlns:f="/lib/form">
 
-    <f:entry title="Chat Ids" field="chatIds" description="Chat IDs">
-      <f:textbox field="chatIds"/>
-    </f:entry>
+    <f:section title="Basic Notification Options">
 
-    <f:entry title="Send if success?" field="sendIfSuccess" description="Sends the notification if the build succeed">
-      <f:checkbox/>
-    </f:entry>
+        <f:entry title="Default chat IDs (required)" field="chatIds" description="Default chat IDs">
+            <f:textbox field="defaultChatIds"/>
+        </f:entry>
+
+        <f:entry title="Send if success?" field="sendIfSuccess" description="Sends the notification if the build succeed">
+            <f:checkbox/>
+        </f:entry>
+
+    </f:section>
+
+    <f:advanced>
+        <f:section title="Per Status Notification Options">
+
+            <f:entry title="Success Notification (optional)" field="successfulChatIds"
+                description="Chat IDs for sending notifications regarding successful builds">
+                <f:textbox/>
+            </f:entry>
+
+            <f:entry title="Broken Notification (optional)" field="brokenChatIds"
+                description="Chat IDs for sending notifications regarding broken builds">
+                <f:textbox/>
+            </f:entry>
+
+            <f:entry title="Still Broken Notification (optional)" field="stillBrokenChatIds"
+                description="Chat IDs for sending notifications regarding subsequent broken builds">
+                <f:textbox/>
+            </f:entry>
+
+            <f:entry title="Fixed Notification (optional)" field="fixedChatIds"
+                description="Chat IDs for sending notifications regarding builds that fixed a broken one">
+                <f:textbox/>
+            </f:entry>
+
+        </f:section>
+
+    </f:advanced>
 
 </j:jelly>
