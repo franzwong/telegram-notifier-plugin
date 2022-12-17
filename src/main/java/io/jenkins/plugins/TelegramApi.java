@@ -19,20 +19,16 @@ public class TelegramApi {
 
     private final String botToken;
 
-    private final String chatIds;
-
     private final ObjectMapper objectMapper;
 
-    public TelegramApi(@NonNull String botToken, @NonNull String chatIds) {
+    public TelegramApi(@NonNull String botToken) {
         this.botToken = botToken;
-        this.chatIds = chatIds;
-        this.objectMapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    public void sendMessage(String message) throws IOException, TelegramApiException {
+    public void sendMessage(@NonNull String[] chatIds, String message) throws IOException, TelegramApiException {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-            for (String chatId: chatIds.split("\\s*,\\s*")) {
+            for (String chatId: chatIds) {
                 HttpPost httpPost = new HttpPost(String.format(
                     "https://api.telegram.org/bot%s/sendMessage",
                     botToken
@@ -44,10 +40,13 @@ public class TelegramApi {
                 nvps.add(new BasicNameValuePair("text", message));
                 httpPost.setEntity(new UrlEncodedFormEntity(nvps));
 
-                httpClient.execute(httpPost, resp -> {
+                SendMessageResponse response = httpClient.execute(httpPost, resp -> {
                     HttpEntity entity = resp.getEntity();
-                    return null;
+                    return this.objectMapper.readValue(entity.getContent(), SendMessageResponse.class);
                 });
+                if (!response.isOk()) {
+                    throw new TelegramApiException(response.getErrorCode(), response.getDescription());
+                }
             }
         }
     }

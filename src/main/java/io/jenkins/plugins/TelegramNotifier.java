@@ -28,18 +28,51 @@ import java.util.List;
 
 public class TelegramNotifier extends Notifier implements SimpleBuildStep {
 
-    private final String chatIds;
+    private final String defaultChatIds;
 
     private boolean sendIfSuccess;
 
+    private String successfulChatIds;
+
+    private String brokenChatIds;
+
+    private String stillBrokenChatIds;
+
+    private String fixedChatIds;
+
     @DataBoundConstructor
-    public TelegramNotifier(String chatIds) {
-        this.chatIds = chatIds;
+    public TelegramNotifier(String defaultChatIds) {
+        this.defaultChatIds = isNullOrBlank(defaultChatIds) ? null : defaultChatIds.trim();
         this.sendIfSuccess = false;
+
+        this.successfulChatIds = null;
+        this.brokenChatIds = null;
+        this.stillBrokenChatIds = null;
+        this.fixedChatIds = null;
     }
 
-    public String getChatIds() {
-        return chatIds;
+    public String getDefaultChatIds() {
+        return defaultChatIds;
+    }
+
+    public boolean isSendIfSuccess() {
+        return sendIfSuccess;
+    }
+
+    public String getSuccessfulChatIds() {
+        return successfulChatIds;
+    }
+
+    public String getBrokenChatIds() {
+        return brokenChatIds;
+    }
+
+    public String getStillBrokenChatIds() {
+        return stillBrokenChatIds;
+    }
+
+    public String getFixedChatIds() {
+        return fixedChatIds;
     }
 
     @DataBoundSetter
@@ -47,35 +80,80 @@ public class TelegramNotifier extends Notifier implements SimpleBuildStep {
         this.sendIfSuccess = sendIfSuccess;
     }
 
-    public boolean isSendIfSuccess() {
-        return sendIfSuccess;
+    @DataBoundSetter
+    public void setSuccessfulChatIds(String successfulChatIds) {
+        this.successfulChatIds = isNullOrBlank(successfulChatIds) ? null : successfulChatIds.trim();
+    }
+
+    @DataBoundSetter
+    public void setBrokenChatIds(String brokenChatIds) {
+        this.brokenChatIds = isNullOrBlank(brokenChatIds) ? null : brokenChatIds.trim();
+    }
+
+    @DataBoundSetter
+    public void setStillBrokenChatIds(String stillBrokenChatIds) {
+        this.stillBrokenChatIds = isNullOrBlank(stillBrokenChatIds) ? null : stillBrokenChatIds.trim();
+    }
+
+    @DataBoundSetter
+    public void setFixedChatIds(String fixedChatIds) {
+        this.fixedChatIds = isNullOrBlank(fixedChatIds) ? null : fixedChatIds.trim();
     }
 
     @Override
     public void perform(@NonNull Run<?,?> build, @NonNull FilePath workspace, @NonNull EnvVars env,
                         @NonNull Launcher launcher, @NonNull TaskListener listener)
-        throws IOException, InterruptedException {
-        if (chatIds == null || chatIds.trim().isEmpty()) {
-            throw new AbortException("No chat IDs defined");
+        throws IOException {
+        if (isNullOrBlank(defaultChatIds)) {
+            throw new AbortException("No default chat IDs defined");
         }
 
         DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
         String botToken = descriptor.getBotToken();
-        if (botToken == null || botToken.trim().isEmpty()) {
+        if (isNullOrBlank(botToken)) {
             throw new AbortException("No bot token defined");
         }
 
-        TelegramApi api = new TelegramApi(botToken, chatIds);
+        TelegramApi api = new TelegramApi(botToken);
 
         BuildStatus status = BuildStatus.of(build);
         if (status != BuildStatus.SUCCESSFUL || sendIfSuccess) {
             BuildNotificationMessage message = createMessage(build);
             try {
-                api.sendMessage(message.toString());
+                String[] chatIds = getChatIdsByBuildStatus(status);
+                api.sendMessage(chatIds, message.toString());
             } catch (TelegramApiException e) {
                 e.printStackTrace(listener.getLogger());
             }
         }
+    }
+
+    private String[] getChatIdsByBuildStatus(BuildStatus status) {
+        String chatIds = null;
+        switch (status) {
+            case SUCCESSFUL:
+                chatIds = successfulChatIds;
+                break;
+            case BROKEN:
+                chatIds = brokenChatIds;
+                break;
+            case STILL_BROKEN:
+                chatIds = stillBrokenChatIds;
+                break;
+            case FIXED:
+                chatIds = fixedChatIds;
+                break;
+        }
+        if (chatIds == null) {
+            chatIds = this.defaultChatIds;
+        }
+        List<String> chatIdList = new ArrayList<>();
+        for (String chatId : chatIds.split("\\s*,\\s*")) {
+            if (!isNullOrBlank(chatId)) {
+                chatIdList.add(chatId);
+            }
+        }
+        return chatIdList.toArray(new String[0]);
     }
 
     private BuildNotificationMessage createMessage(Run<?,?> build) {
@@ -109,6 +187,10 @@ public class TelegramNotifier extends Notifier implements SimpleBuildStep {
         String urlTitle = "Go to build";
 
         return new BuildNotificationMessage(title, result, changes, url, urlTitle);
+    }
+
+    private boolean isNullOrBlank(String value) {
+        return (value == null || value.trim().isEmpty());
     }
 
     @Extension
