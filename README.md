@@ -26,13 +26,21 @@ mvn install
 
 ### Parameters
 
-* chatIds (String, required): The telegram group ID. Multiple group IDs are split with `,`. Example: `-12345678`, `-12345678,-23456789`.
-* sendIfSuccess: (Boolean, optional): Send notification even the build succeeds. Default value is `false`.
+* defaultChatIds: (String, required) Default telegram chat IDs.
+* sendIfSuccess: (Boolean, optional) Send notification even the build succeeds. Default value is `false`.
+* successfulChatIds: (String, optional) Telegram chat IDs for sending notifications regarding successful builds. Default chat IDs is used if it is not defined.
+* brokenChatIds: (String, optional) Telegram chat IDs for sending notifications regarding broken builds. Default chat IDs is used if it is not defined.
+* stillBrokenChatIds: (String, optional) Telegram chat IDs for sending notifications regarding subsequent broken builds. Default chat IDs is used if it is not defined.
+* fixedChatIds: (String, optional) Telegram chat IDs for sending notifications regarding builds that fixed a broken one. Default chat IDs is used if it is not defined.
+
+Multiple chat IDs should be separated with `,`. Example: `-12345678,-23456789`.
+
+Example:
 
 ```groovy
 post {
     always {
-        step([$class: 'TelegramNotifier', chatIds: '-12345678', sendIfSuccess: true])
+        step([$class: 'TelegramNotifier', defaultChatIds: '-12345678', sendIfSuccess: true, brokenChatIds: '-23456789', stillBrokenChatIds: '-23456789', fixedChatIds: '-12345678,-23456789'])
     }
 }
 ```
